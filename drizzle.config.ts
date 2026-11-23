@@ -10,6 +10,8 @@ export default defineConfig({
   // the `public` schema where our tables live.
   schemaFilter: ["public"],
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    // drizzle-kit hangs on Supabase's transaction pooler (port 6543), so it
+    // uses the session pooler on the same host (port 5432) instead.
+    url: process.env.DATABASE_URL!.replace(":6543/", ":5432/"),
   },
 });

@@ -7,6 +7,10 @@
  * npx drizzle-kit push
  * ```
  *
+ * Every table has row-level security on with no policies, so Supabase's
+ * public Data API can't read or write them. The app connects directly as
+ * the table owner (DATABASE_URL), which RLS does not restrict.
+ *
  * Relationship summary:
  * - many-to-one:  prompts → categories, answers → prompts, plays → profiles,
  *                 plays → prompts, guesses → plays, guesses → answers
@@ -40,7 +44,7 @@ export const friendshipStatusEnum = pgEnum("friendship_status", [
  * `profiles` — one row per signed-up user. `id` matches the Supabase
  * `auth.users.id` of that user.
  */
-export const profilesTable = pgTable("profiles", {
+export const profilesTable = pgTable.withRLS("profiles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   handle: text("handle").notNull().unique(),
@@ -53,7 +57,7 @@ export const profilesTable = pgTable("profiles", {
  * History, Chapel Hill, Academics, ...). `iconUrl` is a path in the
  * `category-icons` storage bucket.
  */
-export const categoriesTable = pgTable("categories", {
+export const categoriesTable = pgTable.withRLS("categories", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
@@ -66,7 +70,7 @@ export const categoriesTable = pgTable("categories", {
  * `dailyDate` is set when the prompt is (or was) the Daily Heel for that
  * date; prompts with a null `dailyDate` are Unlimited-only.
  */
-export const promptsTable = pgTable("prompts", {
+export const promptsTable = pgTable.withRLS("prompts", {
   id: serial("id").primaryKey(),
   categoryId: integer("category_id")
     .notNull()
@@ -83,7 +87,7 @@ export const promptsTable = pgTable("prompts", {
  *
  * `timesFound` is a running counter used to compute live rarity.
  */
-export const answersTable = pgTable("answers", {
+export const answersTable = pgTable.withRLS("answers", {
   id: serial("id").primaryKey(),
   promptId: integer("prompt_id")
     .notNull()
@@ -100,7 +104,7 @@ export const answersTable = pgTable("answers", {
  * profiles ↔ prompts many-to-many relationship. A user gets only one
  * daily-mode play per prompt (partial unique index).
  */
-export const playsTable = pgTable(
+export const playsTable = pgTable.withRLS(
   "plays",
   {
     id: serial("id").primaryKey(),
@@ -129,7 +133,7 @@ export const playsTable = pgTable(
  * `guesses` — every submission during a play. `answerId` is null for a
  * wrong guess (a strike). Junction table for plays ↔ answers.
  */
-export const guessesTable = pgTable("guesses", {
+export const guessesTable = pgTable.withRLS("guesses", {
   id: serial("id").primaryKey(),
   playId: integer("play_id")
     .notNull()
@@ -146,7 +150,7 @@ export const guessesTable = pgTable("guesses", {
  * `friendships` — self-referencing many-to-many on profiles.
  * `requesterId` sent the request; `addresseeId` received it.
  */
-export const friendshipsTable = pgTable(
+export const friendshipsTable = pgTable.withRLS(
   "friendships",
   {
     requesterId: text("requester_id")

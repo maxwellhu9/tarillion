@@ -42,12 +42,16 @@ const categories = [
   { slug: "chapel-hill", name: "Chapel Hill", description: "The town around the university" },
 ];
 
-const hall = (text: string, rarity: number, extra: Partial<SeedAnswer> = {}): SeedAnswer => ({
-  text,
-  aliases: [`${text} Residence Hall`, `${text} Hall`],
-  rarity,
-  ...extra,
-});
+/** A residence hall, also accepted with "Hall" / "Residence Hall" after it or its nicknames. */
+const hall = (text: string, rarity: number, extra: { nicknames?: string[]; golden?: boolean } = {}): SeedAnswer => {
+  const names = [text, ...(extra.nicknames ?? [])];
+  return {
+    text,
+    aliases: [...names.slice(1), ...names.flatMap((n) => [`${n} Residence Hall`, `${n} Hall`])],
+    rarity,
+    golden: extra.golden,
+  };
+};
 
 const prompts: SeedPrompt[] = [
   {
@@ -55,8 +59,8 @@ const prompts: SeedPrompt[] = [
     question: "Name a UNC residence hall",
     daily: true,
     answers: [
-      hall("Hinton James", 10, { aliases: ["HoJo", "Hinton James Residence Hall"] }),
-      hall("Ehringhaus", 15, { aliases: ["Ehaus", "Ehringhaus Residence Hall"] }),
+      hall("Hinton James", 10, { nicknames: ["HoJo"] }),
+      hall("Ehringhaus", 15, { nicknames: ["Ehaus"] }),
       hall("Craige", 20),
       hall("Morrison", 20),
       hall("Koury", 30),
@@ -77,7 +81,7 @@ const prompts: SeedPrompt[] = [
       hall("Lewis", 60),
       hall("Everett", 55),
       hall("Stacy", 65),
-      hall("McClinton", 60, { aliases: ["Aycock", "McClinton Residence Hall"] }),
+      hall("McClinton", 60, { nicknames: ["Aycock"] }),
       hall("Spencer", 60),
       hall("Kenan", 55),
       hall("Alderman", 65),
