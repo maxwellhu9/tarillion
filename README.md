@@ -1,46 +1,26 @@
-# Tarillion 🐏
+# Tarillion
 
-A daily UNC trivia game where **the more obscure your answer, the more it's worth.** Every day everyone gets the same prompt ("Name a UNC residence hall"). Type as many answers as you can before three strikes. Answers score by rarity, and one hidden **Golden Ram** answer is worth a big bonus.
+A daily UNC trivia game where rarer answers score more points. COMP 426 Final Project, Fall 2026.
 
-COMP 426 Final Project, Fall 2026.
+Team: Maxwell Hu, Yewon Song, Ethan Tran, Aiden Li
 
-- 📄 [Project description](docs/PROJECT_DESCRIPTION.md)
-- 🗄️ [Database schema & API documentation](docs/SCHEMA_AND_API.md) ([diagram](docs/schema-diagram.png))
+- [Project description](docs/PROJECT_DESCRIPTION.md)
+- [Database schema and API](docs/SCHEMA_AND_API.md)
 
-## Stack
-
-Next.js (App Router) · TypeScript · tRPC · Drizzle ORM · Supabase (Postgres, Auth, Storage) · Tailwind + shadcn/ui · Vercel
-
-## Getting started
+## Setup
 
 ```bash
 npm install
-cp .env.example .env    # fill in values from the Supabase dashboard
-npm run db:push         # create the tables in Supabase
-npm run db:seed         # load the UNC categories, prompts and answers
-npm run dev             # http://localhost:3000
+cp .env.example .env   # add Supabase values
+npm run db:push        # create tables
+npm run db:seed        # add UNC prompts and answers
+npm run dev
 ```
 
-## Project structure
+## Structure
 
-| Path | What it is |
-| --- | --- |
-| `app/` | Pages (App Router). `login/`, `signup/` are done; the game pages are next |
-| `app/api/trpc/[trpc]/route.ts` | tRPC HTTP endpoint |
-| `server/db/schema.ts` | Drizzle table definitions (7 tables) |
-| `server/db/relations.ts` | Drizzle relations |
-| `server/db/seed.ts` | UNC trivia seed data (7 prompts, sourced from unc.edu / Wikipedia) |
-| `server/models/inputs.ts`, `responses.ts` | Zod input / output models: the API contract |
-| `server/api/routers/` | tRPC routers: `profiles`, `categories`, `prompts`, `game`, `leaderboard`, `friends`, `stats` |
-| `utils/supabase/` | Supabase clients, auth helpers, storage upload helpers |
-
-Procedures that still throw `NOT_IMPLEMENTED` already have their final input and output types, so front-end work can start against them now. See `docs/SCHEMA_AND_API.md` for what each one must do.
-
-## Team
-
-| Name | Focus |
-| --- | --- |
-| Maxwell Hu | |
-| Yewon Song | |
-| Ethan Tran | |
-| Aiden Li | |
+- `app/` pages
+- `server/db/` schema, relations, seed data
+- `server/models/` Zod input and output types
+- `server/api/routers/` tRPC procedures (unfinished ones throw NOT_IMPLEMENTED)
+- `utils/` Supabase and tRPC clients
