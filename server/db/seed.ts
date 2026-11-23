@@ -2,7 +2,7 @@
  * Seeds categories, prompts and answers with UNC trivia.
  *
  * Run with:  npm run db:seed
- * (Safe to re-run: it clears categories/prompts/answers first.)
+ * Re-running clears categories, prompts and answers (and any plays of them).
  *
  * Sources (checked Nov 2026; re-check before the demo):
  * - Residence halls: housing.unc.edu "What's My Address" + Wikipedia "UNC-Chapel Hill student housing"
@@ -14,6 +14,7 @@
 
 import "dotenv/config";
 import { client, db } from "./index";
+import { todayInChapelHill } from "../api/scoring";
 import { answersTable, categoriesTable, promptsTable } from "./schema";
 
 type SeedAnswer = {
@@ -27,7 +28,8 @@ type SeedAnswer = {
 type SeedPrompt = {
   category: string;
   question: string;
-  dailyDate?: string;
+  /** Daily prompts get consecutive dates starting the day the seed runs. */
+  daily?: boolean;
   answers: SeedAnswer[];
 };
 
@@ -51,7 +53,7 @@ const prompts: SeedPrompt[] = [
   {
     category: "campus",
     question: "Name a UNC residence hall",
-    dailyDate: "2026-12-01",
+    daily: true,
     answers: [
       hall("Hinton James", 10, { aliases: ["HoJo", "Hinton James Residence Hall"] }),
       hall("Ehringhaus", 15, { aliases: ["Ehaus", "Ehringhaus Residence Hall"] }),
@@ -90,7 +92,7 @@ const prompts: SeedPrompt[] = [
   {
     category: "sports",
     question: "Name a UNC men's basketball player whose number is retired",
-    dailyDate: "2026-12-02",
+    daily: true,
     answers: [
       { text: "Michael Jordan", aliases: ["Jordan", "MJ"], rarity: 5 },
       { text: "James Worthy", aliases: ["Worthy"], rarity: 30 },
@@ -105,7 +107,7 @@ const prompts: SeedPrompt[] = [
   {
     category: "history",
     question: "Name a chancellor of UNC-Chapel Hill",
-    dailyDate: "2026-12-03",
+    daily: true,
     answers: [
       { text: "Lee Roberts", aliases: ["Roberts"], rarity: 10 },
       { text: "Kevin Guskiewicz", aliases: ["Guskiewicz", "Guskiewiecz"], rarity: 30 },
@@ -126,7 +128,7 @@ const prompts: SeedPrompt[] = [
   {
     category: "sports",
     question: "Name a venue that has hosted Tar Heel athletics",
-    dailyDate: "2026-12-04",
+    daily: true,
     answers: [
       { text: "Dean E. Smith Center", aliases: ["Dean Smith Center", "Smith Center", "Dean Dome"], rarity: 5 },
       { text: "Kenan Stadium", aliases: ["Kenan Memorial Stadium", "Kenan"], rarity: 10 },
@@ -148,7 +150,7 @@ const prompts: SeedPrompt[] = [
   {
     category: "academics",
     question: "Name a library at UNC-Chapel Hill",
-    dailyDate: "2026-12-05",
+    daily: true,
     answers: [
       { text: "Davis Library", aliases: ["Davis", "Walter Royal Davis Library"], rarity: 5 },
       { text: "Undergraduate Library", aliases: ["House Undergraduate Library", "UL", "House Library", "R.B. House"], rarity: 20 },
@@ -216,10 +218,13 @@ async function main() {
   const insertedCategories = await db.insert(categoriesTable).values(categories).returning();
   const categoryId = Object.fromEntries(insertedCategories.map((c) => [c.slug, c.id]));
 
+  const day = new Date(`${todayInChapelHill()}T12:00:00Z`);
   for (const p of prompts) {
+    const dailyDate = p.daily ? day.toISOString().slice(0, 10) : null;
+    if (p.daily) day.setUTCDate(day.getUTCDate() + 1);
     const [prompt] = await db
       .insert(promptsTable)
-      .values({ categoryId: categoryId[p.category], question: p.question, dailyDate: p.dailyDate ?? null })
+      .values({ categoryId: categoryId[p.category], question: p.question, dailyDate })
       .returning();
     await db.insert(answersTable).values(
       p.answers.map((a) => ({
@@ -230,7 +235,7 @@ async function main() {
         isGolden: a.golden ?? false,
       })),
     );
-    console.log(`Seeded "${p.question}" (${p.answers.length} answers)`);
+    console.log(`Seeded "${p.question}" (${p.answers.length} answers${dailyDate ? `, daily on ${dailyDate}` : ""})`);
   }
   await client.end();
 }
