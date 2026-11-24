@@ -22,6 +22,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   integer,
   pgEnum,
@@ -67,23 +68,35 @@ export const categoriesTable = pgTable.withRLS("categories", {
 
 /**
  * `prompts` — one question, e.g. "Name a UNC residence hall".
- * `dailyDate` is set when the prompt is (or was) the Daily Heel for that
- * date; prompts with a null `dailyDate` are Unlimited-only.
+ * Each day has three daily prompts: `dailyDate` is the day and
+ * `dailyPosition` (1–3) the order. Both are null for Unlimited-only prompts.
  */
-export const promptsTable = pgTable.withRLS("prompts", {
-  id: serial("id").primaryKey(),
-  categoryId: integer("category_id")
-    .notNull()
-    .references(() => categoriesTable.id, { onDelete: "restrict" }),
-  question: text("question").notNull(),
-  dailyDate: date("daily_date", { mode: "string" }).unique(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const promptsTable = pgTable.withRLS(
+  "prompts",
+  {
+    id: serial("id").primaryKey(),
+    categoryId: integer("category_id")
+      .notNull()
+      .references(() => categoriesTable.id, { onDelete: "restrict" }),
+    question: text("question").notNull(),
+    dailyDate: date("daily_date", { mode: "string" }),
+    dailyPosition: integer("daily_position"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("prompts_daily_slot").on(t.dailyDate, t.dailyPosition),
+    check(
+      "prompts_daily_position_valid",
+      sql`(${t.dailyDate} is null and ${t.dailyPosition} is null) or (${t.dailyDate} is not null and ${t.dailyPosition} between 1 and 3)`,
+    ),
+  ],
+);
 
 /**
  * `answers` — every accepted answer to a prompt. `aliases` holds alternate
- * spellings/nicknames ("Lenoir", "Lenoir Dining Hall"). Exactly one answer
- * per prompt may be the Golden Ram (`isGolden`).
+ * spellings/nicknames ("Lenoir", "Lenoir Dining Hall"). One answer per
+ * prompt is the Golden Ram (`isGolden`): a niche answer with a base rarity
+ * of at least 90 that keeps that rarity no matter how many players find it.
  *
  * `timesFound` is a running counter used to compute live rarity.
  */

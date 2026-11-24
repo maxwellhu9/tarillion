@@ -82,12 +82,15 @@ export function matchAnswer<T extends Matchable>(
   return tied ? null : best;
 }
 
-/** 5–100. Higher means fewer players found the answer. */
+/**
+ * 5–100. Higher means fewer players found the answer. The Golden Ram always
+ * keeps its base rarity.
+ */
 export function rarity(
-  answer: { baseRarity: number; timesFound: number },
+  answer: { baseRarity: number; timesFound: number; isGolden: boolean },
   finishedPlays: number,
 ): number {
-  if (finishedPlays < MIN_PLAYS_FOR_LIVE_RARITY) return answer.baseRarity;
+  if (answer.isGolden || finishedPlays < MIN_PLAYS_FOR_LIVE_RARITY) return answer.baseRarity;
   const foundRate = Math.min(1, answer.timesFound / finishedPlays);
   return Math.min(100, Math.max(5, Math.round(100 * (1 - foundRate))));
 }

@@ -1,5 +1,5 @@
 /**
- * Home page placeholder. Will become the Daily Heel game board.
+ * Home page placeholder. Will become the daily game board.
  */
 
 "use client";
@@ -13,7 +13,7 @@ export default function HomePage({ user }: HomePageProps) {
     <div className="mx-auto w-full max-w-xl py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Today&apos;s Daily Heel</CardTitle>
+          <CardTitle>Today&apos;s prompts</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground">
           Game board coming soon. Signed in as {user.id}.

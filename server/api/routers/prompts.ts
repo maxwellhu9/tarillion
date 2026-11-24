@@ -12,8 +12,8 @@ import { Paginated, Prompt } from "@/server/models/responses";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { notImplemented } from "./_todo";
 
-/** Today's Daily Heel (date in America/New_York). */
-const getDailyPrompt = publicProcedure.output(Prompt).query(notImplemented);
+/** Today's three daily prompts in `dailyPosition` order (America/New_York date). */
+const getDailyPrompts = publicProcedure.output(Prompt.array()).query(notImplemented);
 
 const getPrompt = publicProcedure
   .input(PromptIdentity)
@@ -26,14 +26,14 @@ const getRandomPrompt = publicProcedure
   .output(Prompt)
   .query(notImplemented);
 
-/** Past Daily Heels, newest first (today excluded). */
+/** Past daily prompts, newest first (today excluded). */
 const getArchive = publicProcedure
   .input(ArchiveParams)
   .output(Paginated(Prompt))
   .query(notImplemented);
 
 export const promptsApiRouter = createTRPCRouter({
-  getDailyPrompt,
+  getDailyPrompts,
   getPrompt,
   getRandomPrompt,
   getArchive,

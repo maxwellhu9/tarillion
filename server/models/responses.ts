@@ -27,6 +27,8 @@ export const Prompt = z.object({
   question: z.string(),
   category: Category,
   dailyDate: z.string().nullable(),
+  /** 1–3 within the day; null for Unlimited-only prompts. */
+  dailyPosition: z.number().nullable(),
   answerCount: z.number(),
 });
 

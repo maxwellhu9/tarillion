@@ -28,7 +28,7 @@ type SeedAnswer = {
 type SeedPrompt = {
   category: string;
   question: string;
-  /** Daily prompts get consecutive dates starting the day the seed runs. */
+  /** Daily prompts fill three slots per day, starting the day the seed runs. */
   daily?: boolean;
   answers: SeedAnswer[];
 };
@@ -66,7 +66,7 @@ const prompts: SeedPrompt[] = [
       hall("Koury", 30),
       hall("Horton", 35),
       hall("Hardin", 40),
-      hall("Craige North", 55, { golden: true }),
+      hall("Craige North", 90, { golden: true }),
       hall("Carmichael", 35),
       hall("Parker", 50),
       hall("Avery", 50),
@@ -172,6 +172,7 @@ const prompts: SeedPrompt[] = [
   {
     category: "sports",
     question: "Name a year UNC won the men's basketball national championship",
+    daily: true,
     answers: [
       { text: "2017", rarity: 15 },
       { text: "2009", rarity: 20 },
@@ -215,6 +216,12 @@ const prompts: SeedPrompt[] = [
 ];
 
 async function main() {
+  for (const p of prompts) {
+    const golden = p.answers.filter((a) => a.golden);
+    if (golden.length !== 1 || golden[0].rarity < 90) {
+      throw new Error(`"${p.question}" needs exactly one Golden Ram with rarity 90+`);
+    }
+  }
   await db.delete(answersTable);
   await db.delete(promptsTable);
   await db.delete(categoriesTable);
@@ -222,13 +229,21 @@ async function main() {
   const insertedCategories = await db.insert(categoriesTable).values(categories).returning();
   const categoryId = Object.fromEntries(insertedCategories.map((c) => [c.slug, c.id]));
 
-  const day = new Date(`${todayInChapelHill()}T12:00:00Z`);
+  const start = new Date(`${todayInChapelHill()}T12:00:00Z`);
+  let dailyIndex = 0;
   for (const p of prompts) {
-    const dailyDate = p.daily ? day.toISOString().slice(0, 10) : null;
-    if (p.daily) day.setUTCDate(day.getUTCDate() + 1);
+    let dailyDate: string | null = null;
+    let dailyPosition: number | null = null;
+    if (p.daily) {
+      const day = new Date(start);
+      day.setUTCDate(start.getUTCDate() + Math.floor(dailyIndex / 3));
+      dailyDate = day.toISOString().slice(0, 10);
+      dailyPosition = (dailyIndex % 3) + 1;
+      dailyIndex++;
+    }
     const [prompt] = await db
       .insert(promptsTable)
-      .values({ categoryId: categoryId[p.category], question: p.question, dailyDate })
+      .values({ categoryId: categoryId[p.category], question: p.question, dailyDate, dailyPosition })
       .returning();
     await db.insert(answersTable).values(
       p.answers.map((a) => ({
@@ -239,7 +254,7 @@ async function main() {
         isGolden: a.golden ?? false,
       })),
     );
-    console.log(`Seeded "${p.question}" (${p.answers.length} answers${dailyDate ? `, daily on ${dailyDate}` : ""})`);
+    console.log(`Seeded "${p.question}" (${p.answers.length} answers${dailyDate ? `, daily ${dailyDate} #${dailyPosition}` : ""})`);
   }
   await client.end();
 }
