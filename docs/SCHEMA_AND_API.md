@@ -213,7 +213,7 @@ type Paginated<T> = { items: T[]; nextCursor: number | null };
 
 ### Scoring
 
-- Guesses are compared to each answer's text and aliases, ignoring case and punctuation.
+- Guesses are compared to each answer's text and aliases, ignoring case and punctuation and allowing small typos (1 for words of 5+ letters, 2 for 9+).
 - Correct: points = rarity = 100 x (1 - times_found / finished plays), between 5 and 100. Uses base_rarity until the prompt has 20 finished plays.
 - Golden Ram: 250 bonus points on top of rarity. One hidden answer per prompt, chosen in advance as a niche, rare answer with a base_rarity of at least 90. It does not change as players find it.
 - Repeat of an answer already found: no points, no strike.
@@ -264,7 +264,7 @@ getDailyPrompts returns today's three prompts in dailyPosition order. getArchive
 | revealAnswers | query | Auth | { promptId: number } | RevealedAnswer[] |
 
 - startPlay resumes the user's existing daily play for that prompt if there is one.
-- revealAnswers is only allowed after the user has finished the prompt.
+- revealAnswers is only allowed after the user has finished the prompt, or for a past day's prompt.
 
 Example, submitGuess:
 
