@@ -37,7 +37,8 @@ erDiagram
         serial id PK
         integer category_id FK
         text question
-        date daily_date UK
+        date daily_date
+        integer daily_position
         timestamp created_at
     }
     answers {
@@ -115,8 +116,11 @@ Enums:
 | id | serial | PK |
 | category_id | integer | FK to categories.id |
 | question | text | not null |
-| daily_date | date | nullable, unique; the day this is the daily prompt |
+| daily_date | date | nullable; the day this is a daily prompt |
+| daily_position | integer | nullable, 1 to 3; order within the day, set only with daily_date |
 | created_at | timestamp | default now() |
+
+Unique index on (daily_date, daily_position). Each day has three daily prompts.
 
 ### answers
 
@@ -127,7 +131,7 @@ Enums:
 | text | text | not null |
 | aliases | text[] | other accepted spellings |
 | base_rarity | integer | default 50; used until a prompt has 20 finished plays |
-| is_golden | boolean | default false; the Golden Ram |
+| is_golden | boolean | default false; the Golden Ram, one niche, rare answer per prompt (base_rarity of at least 90) |
 | times_found | integer | default 0 |
 
 ### plays
@@ -145,7 +149,7 @@ Enums:
 | started_at | timestamp | default now() |
 | finished_at | timestamp | nullable |
 
-Unique index on (profile_id, prompt_id) where mode = 'daily', so one daily attempt per user.
+Unique index on (profile_id, prompt_id) where mode = 'daily', so each user has one daily attempt per prompt, up to three daily plays per day.
 
 ### guesses
 
@@ -181,7 +185,7 @@ type Profile = { id: string; name: string; handle: string; avatarUrl: string | n
 type Category = { id: number; slug: string; name: string; description: string | null; iconUrl: string | null };
 
 // Never includes answers.
-type Prompt = { id: number; question: string; category: Category; dailyDate: string | null; answerCount: number };
+type Prompt = { id: number; question: string; category: Category; dailyDate: string | null; dailyPosition: number | null; answerCount: number };
 
 type Guess = { id: number; rawText: string; matchedAnswer: string | null; points: number; isGolden: boolean; guessedAt: Date };
 
@@ -211,9 +215,11 @@ type Paginated<T> = { items: T[]; nextCursor: number | null };
 
 - Guesses are compared to each answer's text and aliases, ignoring case and punctuation.
 - Correct: points = rarity = 100 x (1 - times_found / finished plays), between 5 and 100. Uses base_rarity until the prompt has 20 finished plays.
-- Golden Ram: 250 bonus points.
+- Golden Ram: 250 bonus points on top of rarity. One hidden answer per prompt, chosen in advance as a niche, rare answer with a base_rarity of at least 90. It does not change as players find it.
 - Repeat of an answer already found: no points, no strike.
-- Wrong: one strike. Three strikes finishes the play.
+- Wrong: one strike. Three strikes finishes the play. Each prompt has its own strikes.
+- Daily score: the sum of the scores of that day's three daily plays. Prompts not played count as 0.
+- Daily streak: a day counts once all three daily prompts are finished.
 
 ### profiles
 
@@ -239,12 +245,12 @@ handleNewUser creates the profile after sign-up. The handle must be 3 to 20 lowe
 
 | Procedure | Type | Access | Input | Output |
 | --- | --- | --- | --- | --- |
-| getDailyPrompt | query | Public | none | Prompt |
+| getDailyPrompts | query | Public | none | Prompt[] |
 | getPrompt | query | Public | { promptId: number } | Prompt |
 | getRandomPrompt | query | Public | { categorySlug?: string } | Prompt |
 | getArchive | query | Public | { cursor?: number; limit?: number; categorySlug?: string } | Paginated\<Prompt\> |
 
-getArchive returns past daily prompts, newest first.
+getDailyPrompts returns today's three prompts in dailyPosition order. getArchive returns past daily prompts, newest first.
 
 ### game
 
@@ -257,7 +263,7 @@ getArchive returns past daily prompts, newest first.
 | endPlay | mutation | Auth | { playId: number } | Play |
 | revealAnswers | query | Auth | { promptId: number } | RevealedAnswer[] |
 
-- startPlay resumes the user's existing daily play if there is one.
+- startPlay resumes the user's existing daily play for that prompt if there is one.
 - revealAnswers is only allowed after the user has finished the prompt.
 
 Example, submitGuess:
@@ -282,7 +288,7 @@ Example, submitGuess:
 | getAllTimeLeaderboard | query | Public | { limit?: number } | LeaderboardEntry[] |
 | getFriendsLeaderboard | query | Auth | { date?: string; limit?: number } | LeaderboardEntry[] |
 
-date is YYYY-MM-DD and defaults to today.
+date is YYYY-MM-DD and defaults to today. Daily scores are summed across the three daily prompts, with one entry per player. foundGolden is true if the player found at least one Golden Ram.
 
 ### friends
 
